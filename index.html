@@ -385,6 +385,30 @@ pre,.gcode{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .gr-code div.on{background:rgba(228,87,46,.22);box-shadow:inset 3px 0 0 #e4572e}
 .gr-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .gr-msg{min-height:3.2em;padding:10px 14px;border-radius:10px;border:1px solid var(--line);margin-top:8px}
+
+/* ===== نافذة شرح الكود سطراً بسطر ===== */
+.explain-btn{margin-top:10px}
+.xm{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 12px 12px;overflow:auto}
+.xm[hidden]{display:none}
+.xp{width:min(1040px,100%);background:var(--surface);color:var(--text,inherit);border:1px solid var(--line);border-radius:14px;padding:18px 18px 22px;margin:auto 0;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.xh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--surface);padding-bottom:10px;z-index:1}
+.xh h2{margin:0;font-size:1.3rem;line-height:1.4}
+.xh .sub{color:var(--muted);font-size:.9rem;direction:ltr;text-align:start}
+.xchips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.xchips span{padding:5px 12px;border-radius:999px;background:var(--surface2);font-size:.88rem}
+.xidea{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);margin-bottom:16px;line-height:1.9}
+.xp h3{margin:18px 0 8px;font-size:1.05rem}
+.xl{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.xl .no{grid-row:1/3;color:var(--muted);font:600 .85rem var(--f-mono);padding-top:3px}
+.xl .xc{direction:ltr;text-align:left;white-space:pre;overflow-x:auto;font:500 .86rem/1.6 var(--f-mono);background:var(--surface2);border-radius:6px;padding:4px 10px}
+.xl .xe{line-height:1.85}
+.xl code,.xp li code,.xidea code{direction:ltr;unicode-bidi:isolate;font:500 .85em var(--f-mono);background:var(--surface2);padding:1px 6px;border-radius:5px}
+.xl.cur{background:rgba(228,87,46,.12)}
+.xp ul{margin:0;padding-inline-start:22px;display:grid;gap:6px;line-height:1.85}
+@media (min-width:780px){
+  .xl{grid-template-columns:34px minmax(0,1fr) minmax(0,1.15fr);align-items:start}
+  .xl .no{grid-row:auto}
+}
 </style>
 
 <div class="wrap">
@@ -483,6 +507,7 @@ pre,.gcode{overflow-x:auto;-webkit-overflow-scrolling:touch}
             <button class="tab" role="tab" type="button" data-lang="java" aria-selected="false">Java</button>
             <button class="tab" role="tab" type="button" data-lang="cpp" aria-selected="false">C++</button>
           </div>
+          <button id="explainBtn" class="btn primary explain-btn" type="button" hidden>شرح الكود</button>
           <div id="code" class="code" tabindex="0" aria-label="الكود مع إبراز السطر الحالي"><div class="codein" id="codein"></div></div>
         </div>
         <div class="card lc">
@@ -625,7 +650,7 @@ const SOON=['البرمجة الديناميكية','الاستدعاء الذا
 
 function parseCode(src){
   return src.replace(/^\n/,'').replace(/\s+$/,'').split('\n').map(function(l){
-    const m=l.match(/\s*(?:#|\/\/)@(\w+)\s*$/);
+    const m=l.match(/\s*(?:#|\/\/)@([\w,]+)\s*$/);
     return m?{t:l.slice(0,m.index),tag:m[1]}:{t:l,tag:''};
   });
 }
@@ -755,17 +780,34 @@ static void selectionSort(int[] a) {        //@start
 }
 `,
 cpp:`
-void selectionSort(vector<int>& a) {        //@start
-    int n = a.size();
-    for (int i = 0; i < n - 1; i++) {       //@outer
-        int minIdx = i;                     //@init
-        for (int j = i + 1; j < n; j++) {   //@inner
-            if (a[j] < a[minIdx]) {         //@cmp
-                minIdx = j;                 //@newmin
+#include <bits/stdc++.h>
+using namespace std;
+void selectionSort(vector<int> &arr){                     //@start
+    int n=arr.size();                                     //@start
+    for(int i=0; i<n-1; ++i){                             //@outer
+        int min_index=i;                                  //@init
+        for(int j=i+1; j<n; ++j){                         //@inner
+            if(arr[j]<arr[min_index]){                    //@cmp
+                min_index=j;                              //@newmin
             }
         }
-        swap(a[i], a[minIdx]);              //@swap
+        swap(arr[i],arr[min_index]);                      //@swap
     }
+}
+void printArray(vector<int> &arr){
+    for(int &val : arr){
+        cout<<val<<" ";
+    }
+    cout<<endl;
+}
+int main(){
+    vector<int> arr={64,25,12,22,11};
+    cout<<"Original Array: ";
+    printArray(arr);
+    selectionSort(arr);
+    cout<<"Sorted Array: ";
+    printArray(arr);
+    return 0;
 }
 `},
   run:function(arr){
@@ -1004,20 +1046,49 @@ static void quickSort(int[] a, int lo, int hi) {   //@start
 }
 `,
 cpp:`
-void quickSort(vector<int>& a, int lo, int hi) {   //@start
-    if (lo < hi) {
-        int pivot = a[hi];                  //@pivot
-        int i = lo - 1;
-        for (int j = lo; j < hi; j++) {     //@loop
-            if (a[j] < pivot) {             //@cmp
-                i++;
-                swap(a[i], a[j]);           //@swap
-            }
+#include <iostream>
+using namespace std;
+int partition(int arr[], int left, int right)
+{
+    int pivot = arr[right];                               //@pivot
+    int sortedIndex = left - 1;
+    for (int j = left; j < right; j++)                    //@loop
+    {
+        if (arr[j] < pivot)                               //@cmp
+        {
+            sortedIndex++;                                //@swap
+            swap(arr[sortedIndex], arr[j]);               //@swap
         }
-        swap(a[i + 1], a[hi]);              //@place
-        quickSort(a, lo, i);                //@rec
-        quickSort(a, i + 2, hi);
     }
+    swap(arr[sortedIndex + 1], arr[right]);               //@place
+    return sortedIndex + 1;
+}
+void quicksort(int arr[], int left, int right)            //@start
+{
+    if (left < right)                                     //@start
+    {
+        int pivot = partition(arr, left, right);
+        quicksort(arr, left, pivot - 1);                  //@rec
+        quicksort(arr, pivot + 1, right);                 //@rec
+    }
+}
+int main() {
+    int n;
+    cout << "Enter number of elements: ";
+    cin >> n;
+    int* arr = new int[n];
+    cout << "Enter " << n << " elements:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cout << " element " << i + 1 << ": ";
+        cin >> arr[i];
+    }
+    quicksort(arr, 0, n - 1);
+    cout << "\nSorted array:\n";
+    for (int i = 0; i < n; i++)
+        cout << arr[i] << " "<<endl;
+    delete[] arr;
+    return 0;
 }
 `},
   run:function(arr){
@@ -1333,13 +1404,38 @@ static int linearSearch(int[] a, int target) {     //@start
 }
 `,
 cpp:`
-int linearSearch(const vector<int>& a, int target) {   //@start
-    for (int i = 0; i < (int)a.size(); i++) {   //@loop
-        if (a[i] == target) {               //@cmp
-            return i;                       //@found
+#include <iostream>
+#include <vector>
+using namespace std;
+int linearSearch(const vector<int>&arr ,int target){      //@start
+    for(int i=1; i<arr.size(); i++){                      //@loop
+        if(arr[i]==target){                               //@cmp
+            return i;                                     //@found
         }
     }
-    return -1;                              //@notfound
+    return -1;                                            //@notfound
+}
+int main(){
+    int n;
+    cout<<"num of (x): ";
+    cin>>n;
+    if(n<=0){
+        cout<<"num array = 0 "<<endl;
+        return 0;
+    }
+    vector<int> arr(n);
+    cout<<" num "<<n<<" :\n";
+    for(int i=1; i<n; i++){
+        cout<<"["<<i<<"]: ";
+        cin>>arr[i];
+    }
+    int target;
+    cout<<"\n target: ";
+    cin>>target;
+    int result=linearSearch(arr,target);
+    if(result !=-1){
+        cout<<"element"<<target<<"in(index): "<<result<<endl;//@found
+    }
 }
 `},
   run:function(arr,t){
@@ -1393,19 +1489,39 @@ static int binarySearch(int[] a, int target) {     //@start
 }
 `,
 cpp:`
-int binarySearch(const vector<int>& a, int target) {   //@start
-    int lo = 0, hi = (int)a.size() - 1;
-    while (lo <= hi) {                      //@loop
-        int mid = (lo + hi) / 2;            //@mid
-        if (a[mid] == target) {             //@cmp
-            return mid;                     //@found
-        } else if (a[mid] < target) {       //@right
-            lo = mid + 1;
-        } else {
-            hi = mid - 1;                   //@left
-        }
+#include <iostream>
+#include <vector>
+using namespace std;
+int binarySearch(vector<int> &arr,int x){                 //@start
+    int low=0;                                            //@start
+    int high=arr.size()-1;                                //@start
+    while(low<=high){                                     //@loop
+        int mid=low+(high-low)/2;                         //@mid
+        if(arr[mid]==x)                                   //@cmp
+            return mid;                                   //@found
+        if(arr[mid]<x)                                    //@right
+            low=mid+1;                                    //@right
+        else
+            high=mid-1;                                   //@left
     }
-    return -1;                              //@notfound
+    return -1;                                            //@notfound
+}
+int main(){
+    int n,x;
+    cout<<"Enter n"<<endl;
+    cin>>n;
+    cout<<"Enter elements value: "<<endl;
+    vector<int> arr(n);
+    for(int i=0; i<n; i++)
+        cin>>arr[i];
+    cout<<"Enter element you want to search: "<<endl;
+    cin>>x;
+    int result=binarySearch(arr,x);
+    if(result ==-1)
+        cout<<"Element is not present in array";          //@notfound
+    else
+        cout<<"Element is present at index: "<<result;    //@found
+    return 0;
 }
 `},
   run:function(arr,t){
@@ -1604,7 +1720,7 @@ int interpolationSearch(const vector<int>& a, int target) {   //@start
 
 /* ---------------- الرياضيات (Math) ---------------- */
 register({
-  id:'gcd',cat:'math',name:'Euclidean GCD',ar:'القاسم المشترك الأكبر (إقليدس)',
+  id:'gcd',cat:'math',pair:true,name:'Euclidean GCD',ar:'القاسم المشترك الأكبر (إقليدس)',
   desc:'تعتمد خوارزمية إقليدس على حقيقة أن قاسم عددين يقسم باقي قسمتهما أيضاً. في كل خطوة نحسب باقي قسمة a على b، ثم نستبدل a بـ b و b بالباقي r حتى يصبح الباقي صفراً، فيكون a الأخير هو القاسم المشترك الأكبر.',
   cx:{best:'O(1)',avg:'O(log(min(a, b)))',worst:'O(log(min(a, b)))',space:'O(1)',note:'تصل إلى أسوأ حالة عندما يكون العددان متتاليين من متتالية فيبوناتشي (مثل 55 و 34). خوارزمية فائقة السرعة حتى لأضخم الأعداد.'},
   swapLabel:'عمليات الباقي والتبديل',
@@ -1629,13 +1745,18 @@ static int gcd(int a, int b) {              //@start
 }
 `,
 cpp:`
-int gcd(int a, int b) {                     //@start
-    while (b != 0) {                        //@loop
-        int r = a % b;                      //@mod
-        a = b;                              //@seta
-        b = r;                              //@setb
-    }
-    return a;                               //@done
+#include <iostream>
+using namespace std;
+int gcd(int a, int b){                                    //@start
+    if(b==0)                                              //@loop
+        return a;                                         //@done
+    return gcd(b, a%b);                                   //@mod,seta,setb
+}
+int main(){
+    int num1, num2,num3;
+    cin>>num1>>num2>>num3;
+    cout<<"Result: "<<gcd(gcd(num1,num2),num3);           //@done
+    return 0;
 }
 `},
   run:function(arr){
@@ -1678,7 +1799,7 @@ int gcd(int a, int b) {                     //@start
 });
 
 register({
-  id:'gcd_sub',cat:'math',name:'Subtraction GCD',ar:'إقليدس بالطرح',
+  id:'gcd_sub',cat:'math',pair:true,name:'Subtraction GCD',ar:'إقليدس بالطرح',
   desc:'الصيغة الأصلية لخوارزمية إقليدس: نطرح الأصغر من الأكبر تكراراً (طالما a ≠ b). عندما يتساوى العددان، يكون الناتج هو القاسم المشترك الأكبر.',
   cx:{best:'O(1)',avg:'O(max(a, b))',worst:'O(max(a, b))',space:'O(1)',note:'أبطأ بكثير من صيغة باقي القسمة، خصوصاً إذا كان أحد العددين كبيراً جداً والآخر صغيراً (مثل 1000 و 2).'},
   swapLabel:'عمليات الطرح',
@@ -1727,6 +1848,56 @@ int gcdSub(int a, int b) {                  //@start
       }
     }
     R.push({f:0,d:[0,1],m:{gcd:0},line:'done',msg:'تساوى العددان: a = b = '+valA+'، وهو القاسم المشترك الأكبر GCD',res:'found',v:{a:valA,b:valB,gcd:valA}});
+    return R.steps;
+  }
+});
+
+register({
+  id:'divide',cat:'math',pair:true,name:'Division Function',ar:'دالة القسمة',
+  desc:'برنامج بسيط يأخذ عددين x و y، ويرسلهما إلى دالة تُرجع ناتج قسمة الأول على الثاني ثم يطبع النتيجة. عملية واحدة مباشرة زمنها ثابت O(1).',
+  cx:{best:'O(1)',avg:'O(1)',worst:'O(1)',space:'O(1)',note:'عند y = 0 تكون النتيجة inf (لا نهاية) مع الأعداد العشرية float في C++، لذا يُفضّل إضافة شرط يمنع القسمة على صفر.'},
+  swapLabel:'عمليات القسمة',
+  validate:function(arr){return arr.length!==2?'أدخل عددين فقط: x ثم y.':'';},
+  code:{
+py:`
+def average(x, y):                         #@start
+    return x / y                           #@div
+
+x, y = map(float, input().split())
+print("The result is:", average(x, y))     #@done
+`,
+java:`
+static float average(float x, float y) {   //@start
+    return x / y;                          //@div
+}
+public static void main(String[] args) {
+    float x = 10, y = 4;
+    System.out.println("The result is: " + average(x, y));   //@done
+}
+`,
+cpp:`
+#include <iostream>
+#include <cmath>
+using namespace std;
+float average(float x, float y){                          //@start
+    return x/y;                                           //@div
+}
+int main(){
+    float x,y;
+    cout<<"Enter element: \n";
+    cin>>x>>y;
+    cout<<"The result is: "<<average(x,y)<<endl;          //@done
+    return 0;
+}
+`},
+  run:function(arr){
+    const R=Rec(arr),x=arr[0],y=arr[1];
+    const fm=function(v){return Number(v.toPrecision(6)).toString();};
+    const res=y===0?(x===0?'nan':'inf'):fm(x/y);
+    R.push({c:[0,1],m:{x:0,y:1},line:'start',msg:'نستدعي الدالة average بالقيمتين x = '+x+' و y = '+y,v:{x:x,y:y,'x/y':'-'}});
+    R.comps++;
+    R.push({c:[0,1],m:{x:0,y:1},line:'div',msg:y===0?'القسمة على صفر: '+x+' ÷ 0 تعطي '+res+' (لا نهاية).':'نحسب '+x+' ÷ '+y+' = '+res,v:{x:x,y:y,'x/y':res}});
+    R.push({f:0,d:[0,1],m:{x:0,y:1},line:'done',msg:'نطبع الناتج: The result is: '+res,res:'found',v:{x:x,y:y,'x/y':res}});
     return R.steps;
   }
 });
@@ -1857,6 +2028,7 @@ binary:{desc:'Works on a sorted array. We compare the target with the middle ele
 jump:{desc:'Works on a sorted array. We jump ahead in fixed steps of √n until we pass the target, then search linearly inside the last block only.',note:'Requires a sorted array. Faster than linear search and simpler than binary search, and useful when going backwards is costly.'},
 interpolation:{desc:'Works on a sorted array. Instead of always going to the middle, it estimates the position from where the value lies between the smallest and largest elements of the range, like opening a dictionary near the end when looking for a word that starts with "Y".',note:'Requires a sorted array. Best when the values are spread roughly evenly, and worst with a heavily skewed distribution.'},
 gcd:{desc:'The Euclidean algorithm is based on the principle that the greatest common divisor of two numbers also divides their remainder. At each step we compute r = a % b, then replace a with b and b with r until b becomes 0. The final value of a is the GCD.',note:'Worst case occurs when the two numbers are consecutive Fibonacci numbers (e.g. 55 and 34). Highly efficient even for very large numbers.'},
+divide:{desc:'A simple program that takes two numbers x and y, passes them to a function that returns x divided by y, then prints the result. A single direct operation with constant time O(1).',note:'When y = 0 the float result is inf in C++, so it is best to add a check that prevents division by zero.'},
 gcd_sub:{desc:'The original Euclidean method using repeated subtraction (as long as a ≠ b). When both numbers become equal, that value is the greatest common divisor.',note:'Significantly slower than the modulo approach, especially when one number is much larger than the other (e.g. 1000 and 2).'}
 };
 
@@ -2194,12 +2366,13 @@ function renderCode(){
     const d=h('div','ln');d.appendChild(h('span','no',String(i+1)));d.appendChild(h('span','tx',l.t||' '));
     box.appendChild(d);codeNodes.push(d);
   });
+  if(window.__syncExplain)window.__syncExplain(A().id);
 }
 function markLine(){
   const tag=pa.steps[pa.idx].line,lines=A().lines[S.lang];
   let first=null;
   codeNodes.forEach(function(n,i){
-    const on=!!tag&&lines[i].tag===tag;
+    const on=!!tag&&(','+lines[i].tag+',').indexOf(','+tag+',')>=0;
     n.classList.toggle('on',on);
     if(on&&!first)first=n;
   });
@@ -2375,9 +2548,9 @@ function updateFields(){
 function select(id,fromHash){
   S.algoId=id;
   if(!fromHash){try{if(location.hash.slice(1)!==id)location.hash=id;}catch(e){}}
-  if((id==='gcd'||id==='gcd_sub')&&S.raw.length>2){
-    setRaw([48,18]);
-  }else if(id!=='gcd'&&id!=='gcd_sub'&&S.raw.length<5){
+  if((BY[id]&&BY[id].pair)&&S.raw.length>2){
+    setRaw(id==='divide'?[10,4]:[48,18]);
+  }else if(!(BY[id]&&BY[id].pair)&&S.raw.length<5){
     setRaw(randomArr(10));
   }
   populateB();
@@ -2395,6 +2568,7 @@ function setCompare(on){
 
 /* ---- أحداث ---- */
 function randomArr(n){
+  if(S.algoId==='divide')return [10+Math.floor(Math.random()*90),1+Math.floor(Math.random()*12)];
   if(S.algoId==='gcd'||S.algoId==='gcd_sub'){
     const g=[2,3,4,6,8,12,14,18][Math.floor(Math.random()*8)];
     const m1=1+Math.floor(Math.random()*12);
@@ -2438,7 +2612,7 @@ function apply(){
 $('#dataForm').addEventListener('submit',function(e){e.preventDefault();apply();});
 $('#btnRandom').addEventListener('click',function(){
   clearErr();
-  const sz=(S.algoId==='gcd'||S.algoId==='gcd_sub')?2:parseInt($('#size').value,10);
+  const sz=(BY[S.algoId]&&BY[S.algoId].pair)?2:parseInt($('#size').value,10);
   setRaw(randomArr(sz));
   pickTarget();rebuildAll();
 });
@@ -3776,6 +3950,67 @@ PRE.barrier();ST=run(AK);
 window.addEventListener('hashchange',route);
 window.addEventListener('av-lang',function(){if(!box.hidden){ST=run(AK);render();}});
 route();
+})();
+</script>
+
+<script id="explain-js">
+/* ============ شرح الكود سطراً بسطر (من ملف الشرح) ============ */
+(function(){
+'use strict';
+const EXPL={"gcd": {"title": "القاسم المشترك الأكبر (GCD) لثلاثة أعداد", "sub": "Greatest Common Divisor — Euclid", "meta": [["المصدر", "صورة الكود (Dev-C++)"], ["التعقيد الزمني", "O(log min(a,b))"], ["عدد الأسطر", "13"]], "idea": "يستخدم البرنامج **خوارزمية إقليدس** لإيجاد القاسم المشترك الأكبر لعددين بشكل تكراري (Recursion)، وللحصول على القاسم المشترك الأكبر لثلاثة أعداد نحسب gcd لأول عددين ثم نحسب gcd للناتج مع العدد الثالث.", "code": ["#include <iostream>", "using namespace std;", "int gcd(int a, int b){", "    if(b==0)", "        return a;", "    return gcd(b, a%b);", "}", "int main(){", "    int num1, num2,num3;", "    cin>>num1>>num2>>num3;", "    cout<<\"Result: \"<<gcd(gcd(num1,num2),num3);", "    return 0;", "}"], "rows": ["تضمين مكتبة الإدخال والإخراج التي تحتوي `cin` و `cout`.", "لاستخدام فضاء الأسماء `std` حتى نكتب `cout` بدل `std::cout`.", "تعريف دالة `gcd` ترجع عددًا صحيحًا وتستقبل عددين `a` و `b`.", "**حالة التوقف:** هل أصبح العدد الثاني صفرًا؟", "نعم: القاسم المشترك الأكبر هو `a`، ونرجعه وتنتهي العملية.", "استدعاء ذاتي: نكرر الحساب بالعدد `b` وباقي قسمة `a` على `b` (قاعدة إقليدس).", "نهاية الدالة.", "بداية البرنامج الرئيسي، ومنه يبدأ التنفيذ.", "تعريف ثلاثة متغيرات صحيحة لتخزين الأعداد المُدخلة.", "قراءة الأعداد الثلاثة من المستخدم بالترتيب.", "طباعة النتيجة: الدالة الداخلية تحسب gcd للعددين الأولين، ثم الخارجية تحسبه مع العدد الثالث.", "إنهاء البرنامج بنجاح (القيمة 0 تعني لا يوجد خطأ).", "نهاية الدالة الرئيسية."], "example": ["المدخلات: `24 18 12`", "`gcd(12,18)` تمر بالخطوات: `(12,18) → (18,12) → (12,6) → (6,0)` فالناتج **6**.", "ثم `gcd(6,24) = 6`.", "الناتج النهائي: `Result: 6`"], "notes": ["إذا كانت الأعداد سالبة قد تظهر نتيجة سالبة بسبب إشارة الباقي في C++.", "إذا أدخلت `0 0 0` سيكون الناتج 0."]}, "divide": {"title": "دالة القسمة بين رقمين", "sub": "Division Function (الكود.pdf)", "meta": [["المصدر", "الكود.pdf"], ["التعقيد الزمني", "O(1)"], ["عدد الأسطر", "13"]], "idea": "برنامج بسيط يأخذ رقمين عشريين من المستخدم، ويرسلهما إلى دالة تُرجع ناتج قسمة الأول على الثاني ثم يطبع النتيجة.", "code": ["#include <iostream>", "#include <cmath>", "using namespace std;", "float average(float x, float y){", "    return x/y;", "}", "int main(){", "    float x,y;", "    cout<<\"Enter element: \\n\";", "    cin>>x>>y;", "    cout<<\"The result is: \"<<average(x,y)<<endl;", "    return 0;", "}"], "rows": ["مكتبة الإدخال والإخراج (`cin` و `cout`).", "مكتبة الدوال الرياضية (مثل `sqrt` و `pow`) — موجودة لكنها غير مستخدمة فعليًا هنا.", "لاستخدام فضاء الأسماء `std` مباشرة.", "تعريف دالة اسمها `average` ترجع عددًا عشريًا `float` وتستقبل رقمين عشريين.", "ترجع ناتج قسمة `x` على `y`.", "نهاية الدالة.", "بداية البرنامج الرئيسي.", "تعريف متغيرين عشريين لتخزين الرقمين.", "طباعة رسالة تطلب من المستخدم إدخال الرقمين، ثم الانتقال لسطر جديد `\\n`.", "قراءة الرقمين وتخزينهما في `x` و `y`.", "استدعاء الدالة وطباعة الناتج، ثم `endl` للنزول لسطر جديد.", "إنهاء البرنامج بنجاح.", "نهاية الدالة الرئيسية."], "example": ["المدخلات: `10 4`", "الناتج: `The result is: 2.5`"], "notes": ["اسم الدالة `average` (المعدل) لكنها فعليًا تقوم **بالقسمة** فقط. المعدل الحقيقي هو `(x+y)/2`.", "عند إدخال `y = 0` يكون الناتج `inf` (لا نهاية)، ويُفضّل إضافة شرط يمنع القسمة على صفر."]}, "linear": {"title": "البحث الخطي (Linear Search)", "sub": "Linear Search (Search_sort.pdf)", "meta": [["المصدر", "Search_sort.pdf"], ["التعقيد الزمني", "O(n)"], ["عدد الأسطر", "33"]], "idea": "يمر البرنامج على عناصر المصفوفة واحدًا واحدًا حتى يجد العنصر المطلوب فيُرجع مكانه (index)، وإذا لم يجده يُرجع `-1`. لا يحتاج أن تكون المصفوفة مرتبة.", "code": ["#include <iostream>", "#include <vector>", "using namespace std;", "int linearSearch(const vector<int>&arr ,int target){", "    for(int i=1; i<arr.size(); i++){", "        if(arr[i]==target){", "            return i;", "        }", "    }", "    return -1;", "}", "int main(){", "    int n;", "    cout<<\"num of (x): \";", "    cin>>n;", "    if(n<=0){", "        cout<<\"num array = 0 \"<<endl;", "        return 0;", "    }", "    vector<int> arr(n);", "    cout<<\" num \"<<n<<\" :\\n\";", "    for(int i=1; i<n; i++){", "        cout<<\"[\"<<i<<\"]: \";", "        cin>>arr[i];", "    }", "    int target;", "    cout<<\"\\n target: \";", "    cin>>target;", "    int result=linearSearch(arr,target);", "    if(result !=-1){", "        cout<<\"element\"<<target<<\"in(index): \"<<result<<endl;", "    }", "}"], "rows": ["مكتبة الإدخال والإخراج.", "مكتبة `vector` (المصفوفة الديناميكية).", "لاستخدام فضاء الأسماء `std`.", "دالة البحث: تستقبل المصفوفة بالمرجع `&` وبشكل ثابت `const` (لا تُعدّل ولا تُنسخ) والعنصر المطلوب `target`.", "حلقة تمر على الفهارس من 1 حتى آخر عنصر. (انتبه: تبدأ من 1 وليس 0).", "هل العنصر الحالي يساوي العنصر المطلوب؟", "نعم: نرجع مكانه وتنتهي الدالة فورًا.", "نهاية شرط `if`.", "نهاية الحلقة `for`.", "إذا انتهت الحلقة دون العثور عليه نرجع `-1` أي (غير موجود).", "نهاية الدالة.", "بداية البرنامج الرئيسي.", "متغير لحجم المصفوفة.", "طباعة رسالة تطلب حجم المصفوفة.", "قراءة الحجم `n`.", "فحص: هل الحجم غير صالح (صفر أو سالب)؟", "طباعة رسالة تفيد بأن المصفوفة فارغة.", "إنهاء البرنامج مباشرة.", "نهاية شرط `if`.", "إنشاء `vector` بحجم `n` (قيمه الابتدائية أصفار).", "طباعة رسالة تطلب إدخال العناصر.", "حلقة لإدخال العناصر من الفهرس 1 إلى n-1.", "طباعة رقم الفهرس الحالي بين قوسين مربعين.", "قراءة القيمة وتخزينها في الموضع `i`.", "نهاية حلقة الإدخال.", "متغير للعنصر الذي نريد البحث عنه.", "طباعة رسالة تطلب العنصر المطلوب.", "قراءة العنصر المطلوب.", "استدعاء دالة البحث وتخزين الناتج (الفهرس أو -1).", "هل وُجد العنصر؟ (الناتج لا يساوي -1).", "طباعة العنصر ومكانه.", "نهاية شرط `if`.", "نهاية البرنامج الرئيسي."], "example": ["`n = 4`، العناصر `[3]=9` `[2]=7` `[1]=5`، المطلوب `7`", "الناتج: `element7in(index): 2`"], "notes": ["الحلقتان تبدآن من `i=1` لذلك **الفهرس 0 لا يُدخَل ولا يُفحَص أبدًا**. لإصلاحها اجعلها `i=0`.", "لا توجد رسالة عند عدم وجود العنصر؛ يمكن إضافة `else` تطبع «غير موجود».", "لا يوجد `return 0;` في `main` وهذا مسموح في C++ (تُعاد 0 تلقائيًا)."]}, "binary": {"title": "البحث الثنائي (Binary Search)", "sub": "Binary Search (binarySearch.pdf)", "meta": [["المصدر", "binarySearch.pdf"], ["التعقيد الزمني", "O(log n)"], ["عدد الأسطر", "34"]], "idea": "يعمل **فقط على مصفوفة مرتبة تصاعديًا**. في كل خطوة نقارن العنصر المطلوب بالعنصر الأوسط، ونرمي نصف المصفوفة الذي لا يمكن أن يحتويه، فنصل للنتيجة بسرعة كبيرة.", "code": ["#include <iostream>", "#include <vector>", "using namespace std;", "int binarySearch(vector<int> &arr,int x){", "    int low=0;", "    int high=arr.size()-1;", "    while(low<=high){", "        int mid=low+(high-low)/2;", "        if(arr[mid]==x)", "            return mid;", "        if(arr[mid]<x)", "            low=mid+1;", "        else", "            high=mid-1;", "    }", "    return -1;", "}", "int main(){", "    int n,x;", "    cout<<\"Enter n\"<<endl;", "    cin>>n;", "    cout<<\"Enter elements value: \"<<endl;", "    vector<int> arr(n);", "    for(int i=0; i<n; i++)", "        cin>>arr[i];", "    cout<<\"Enter element you want to search: \"<<endl;", "    cin>>x;", "    int result=binarySearch(arr,x);", "    if(result ==-1)", "        cout<<\"Element is not present in array\";", "    else", "        cout<<\"Element is present at index: \"<<result;", "    return 0;", "}"], "rows": ["مكتبة الإدخال والإخراج.", "مكتبة `vector`.", "لاستخدام فضاء الأسماء `std`.", "دالة ترجع فهرس العنصر `x` أو `-1`. المصفوفة تُمرَّر بالمرجع `&` لتفادي نسخها.", "بداية النطاق: أول فهرس في المصفوفة.", "نهاية النطاق: آخر فهرس (الحجم – 1).", "نكرر ما دام النطاق صالحًا (البداية لم تتجاوز النهاية).", "حساب الفهرس الأوسط. هذه الصيغة أأمن من `(low+high)/2` لأنها تمنع تجاوز حدود `int`.", "هل العنصر الأوسط هو المطلوب؟", "نعم: نرجع مكانه وننهي البحث.", "هل العنصر الأوسط أصغر من المطلوب؟", "نعم: المطلوب في النصف **الأيمن** (الأكبر)، فنحرّك البداية بعد `mid`.", "وإلا (العنصر الأوسط أكبر من المطلوب):", "المطلوب في النصف **الأيسر** (الأصغر)، فنحرّك النهاية قبل `mid`.", "نهاية الحلقة `while`.", "إذا انتهت الحلقة فالعنصر غير موجود، نرجع `-1`.", "نهاية الدالة.", "بداية البرنامج الرئيسي.", "`n` عدد العناصر، `x` العنصر المراد البحث عنه.", "طباعة رسالة تطلب عدد العناصر.", "قراءة العدد `n`.", "طباعة رسالة تطلب إدخال العناصر.", "إنشاء `vector` بحجم `n`.", "حلقة من 0 إلى n-1.", "قراءة كل عنصر وتخزينه (يجب إدخالها **مرتبة تصاعديًا**).", "طلب العنصر المراد البحث عنه.", "قراءة العنصر المطلوب.", "استدعاء دالة البحث وحفظ الناتج.", "هل الناتج `-1`؟ (غير موجود).", "طباعة أن العنصر غير موجود.", "وإلا (العنصر موجود):", "طباعة أن العنصر موجود مع رقم فهرسه.", "إنهاء البرنامج بنجاح.", "نهاية الدالة الرئيسية."], "example": ["المصفوفة `2 5 8 12 16`، المطلوب `12`", "`low=0, high=4 ← mid=2` (القيمة 8 < 12) ← `low=3`", "`mid=3` (القيمة 12) تساوي المطلوب.", "الناتج: `Element is present at index: 3`"], "notes": ["إذا لم تكن المصفوفة مرتبة ستكون النتيجة خاطئة.", "عدد المقارنات يقارب log₂(n): لمليون عنصر نحتاج حوالي 20 مقارنة فقط."]}, "selection": {"title": "الترتيب بالاختيار (Selection Sort)", "sub": "Selection Sort (SelectionSort.pdf)", "meta": [["المصدر", "SelectionSort.pdf"], ["التعقيد الزمني", "O(n²)"], ["عدد الأسطر", "29"]], "idea": "في كل دورة نبحث عن **أصغر عنصر** في الجزء غير المرتب ونضعه في أول مكان من هذا الجزء، وهكذا حتى تصبح المصفوفة كلها مرتبة تصاعديًا.", "code": ["#include <bits/stdc++.h>", "using namespace std;", "void selectionSort(vector<int> &arr){", "    int n=arr.size();", "    for(int i=0; i<n-1; ++i){", "        int min_index=i;", "        for(int j=i+1; j<n; ++j){", "            if(arr[j]<arr[min_index]){", "                min_index=j;", "            }", "        }", "        swap(arr[i],arr[min_index]);", "    }", "}", "void printArray(vector<int> &arr){", "    for(int &val : arr){", "        cout<<val<<\" \";", "    }", "    cout<<endl;", "}", "int main(){", "    vector<int> arr={64,25,12,22,11};", "    cout<<\"Original Array: \";", "    printArray(arr);", "    selectionSort(arr);", "    cout<<\"Sorted Array: \";", "    printArray(arr);", "    return 0;", "}"], "rows": ["مكتبة شاملة في GCC تضم معظم مكتبات C++ (مثل `vector` و `iostream` و `swap`).", "لاستخدام فضاء الأسماء `std`.", "دالة لا ترجع قيمة (`void`) وترتّب المصفوفة نفسها لأنها مُمرَّرة بالمرجع `&`.", "تخزين عدد العناصر في `n`.", "الحلقة الخارجية: `i` هو الموضع الذي سنضع فيه الأصغر. تتوقف عند n-2 لأن آخر عنصر يصير في مكانه تلقائيًا.", "نفترض أن الأصغر هو العنصر في الموضع `i`.", "الحلقة الداخلية: تفحص باقي العناصر بعد `i`.", "هل وجدنا عنصرًا أصغر من الأصغر الحالي؟", "نعم: نحدّث موقع الأصغر.", "نهاية شرط `if`.", "نهاية الحلقة الداخلية.", "نبدّل مكان الأصغر مع العنصر في الموضع `i`.", "نهاية الحلقة الخارجية.", "نهاية دالة الترتيب.", "دالة مساعدة لطباعة عناصر المصفوفة.", "حلقة `range-based` تمر على كل عنصر، و `&` تمنع نسخ القيمة.", "طباعة العنصر وبعده مسافة.", "نهاية الحلقة.", "الانتقال لسطر جديد بعد الطباعة.", "نهاية دالة الطباعة.", "بداية البرنامج الرئيسي.", "إنشاء مصفوفة وتعبئتها بقيم ابتدائية غير مرتبة.", "طباعة عنوان المصفوفة الأصلية.", "طباعة المصفوفة قبل الترتيب.", "استدعاء دالة الترتيب.", "طباعة عنوان المصفوفة المرتبة.", "طباعة المصفوفة بعد الترتيب.", "إنهاء البرنامج بنجاح.", "نهاية الدالة الرئيسية."], "example": ["المصفوفة `64 25 12 22 11`", "`i=0` ← الأصغر 11 ← `11 25 12 22 64`", "`i=1` ← الأصغر 12 ← `11 12 25 22 64`", "`i=2` ← الأصغر 22 ← `11 12 22 25 64`", "`i=3` ← لا تغيير.", "الناتج: `Sorted Array: 11 12 22 25 64`"], "notes": ["يقوم دائمًا بنفس عدد المقارنات تقريبًا مهما كانت حالة المصفوفة.", "عدد التبديلات قليل (على الأكثر n–1)، وهذه ميزته مقارنةً بالفقاعي."]}, "quick": {"title": "الترتيب السريع (Quick Sort)", "sub": "Quick Sort (quicksort.pdf)", "meta": [["المصدر", "quicksort.pdf"], ["التعقيد الزمني", "O(n log n) متوسط — O(n²) أسوأ"], ["عدد الأسطر", "44"]], "idea": "خوارزمية «فرّق تسد»: نختار عنصرًا محوريًا **pivot** (هنا آخر عنصر)، ونضع الأصغر منه على يساره والأكبر على يمينه، ثم نكرر الترتيب على الجزأين بالاستدعاء الذاتي.", "code": ["#include <iostream>", "using namespace std;", "int partition(int arr[], int left, int right)", "{", "    int pivot = arr[right];", "    int sortedIndex = left - 1;", "    for (int j = left; j < right; j++)", "    {", "        if (arr[j] < pivot)", "        {", "            sortedIndex++;", "            swap(arr[sortedIndex], arr[j]);", "        }", "    }", "    swap(arr[sortedIndex + 1], arr[right]);", "    return sortedIndex + 1;", "}", "void quicksort(int arr[], int left, int right)", "{", "    if (left < right)", "    {", "        int pivot = partition(arr, left, right);", "        quicksort(arr, left, pivot - 1);", "        quicksort(arr, pivot + 1, right);", "    }", "}", "int main() {", "    int n;", "    cout << \"Enter number of elements: \";", "    cin >> n;", "    int* arr = new int[n];", "    cout << \"Enter \" << n << \" elements:\\n\";", "    for (int i = 0; i < n; i++)", "    {", "        cout << \" element \" << i + 1 << \": \";", "        cin >> arr[i];", "    }", "    quicksort(arr, 0, n - 1);", "    cout << \"\\nSorted array:\\n\";", "    for (int i = 0; i < n; i++)", "        cout << arr[i] << \" \"<<endl;", "    delete[] arr;", "    return 0;", "}"], "rows": ["مكتبة الإدخال والإخراج.", "لاستخدام فضاء الأسماء `std` (ومنه `swap`).", "دالة التقسيم: ترجع الموضع النهائي للـ pivot بعد ترتيب الأصغر يسارًا والأكبر يمينًا.", "بداية الدالة.", "اختيار آخر عنصر في النطاق ليكون pivot.", "مؤشر آخر عنصر في منطقة «الأصغر من pivot»، ويبدأ قبل البداية لأن المنطقة فارغة.", "نمرّ على جميع عناصر النطاق ما عدا الـ pivot نفسه.", "بداية الحلقة.", "هل العنصر الحالي أصغر من الـ pivot؟", "بداية الشرط.", "نوسّع منطقة الأصغر بمقدار خانة.", "ننقل العنصر الأصغر إلى تلك المنطقة بالتبديل.", "نهاية الشرط.", "نهاية الحلقة.", "نضع الـ pivot في مكانه الصحيح (بعد كل الأصغر منه مباشرة).", "نرجع موضع الـ pivot.", "نهاية دالة التقسيم.", "الدالة الرئيسية للترتيب: تستقبل المصفوفة وحدود النطاق (يسار، يمين).", "بداية الدالة.", "**حالة التوقف:** إذا كان في النطاق أكثر من عنصر نكمل، وإلا فهو مرتب.", "بداية الشرط.", "نقسّم النطاق ونحصل على موضع الـ pivot النهائي.", "نرتّب الجزء الأيسر (العناصر الأصغر من pivot) بالاستدعاء الذاتي.", "نرتّب الجزء الأيمن (العناصر الأكبر) بالاستدعاء الذاتي.", "نهاية الشرط.", "نهاية دالة الترتيب.", "بداية البرنامج الرئيسي.", "متغير لعدد العناصر.", "طلب عدد العناصر من المستخدم.", "قراءة العدد `n`.", "حجز مصفوفة ديناميكية في الذاكرة بحجم `n` (مؤشر `*` إلى أول عنصر).", "رسالة تطلب إدخال `n` من العناصر.", "حلقة لإدخال كل العناصر.", "بداية الحلقة.", "طباعة رقم العنصر (يبدأ من 1 لسهولة القراءة).", "قراءة القيمة وتخزينها.", "نهاية الحلقة.", "استدعاء الترتيب على كامل المصفوفة (من 0 إلى n–1).", "طباعة عنوان النتيجة.", "حلقة لطباعة العناصر بعد الترتيب.", "طباعة كل عنصر في سطر مستقل (بسبب `endl`).", "تحرير الذاكرة المحجوزة بـ `new[]` لتفادي تسرّب الذاكرة.", "إنهاء البرنامج بنجاح.", "نهاية الدالة الرئيسية."], "example": ["المصفوفة `10 7 8 9 1 5`", "pivot = 5 ← بعد التقسيم: `1 | 5 | 8 9 10 7` (الـ pivot في مكانه النهائي)، ثم يُعاد الترتيب لكل جزء.", "الناتج بعد الانتهاء: `1 5 7 8 9 10` (كل عنصر في سطر)."], "notes": ["اختيار آخر عنصر كـ pivot يعطي أسوأ حالة O(n²) إذا كانت المصفوفة مرتبة مسبقًا.", "الترتيب يتم داخل نفس المصفوفة (in-place) دون مصفوفة إضافية.", "وجود `delete[]` ضروري لأن المصفوفة خُجزت بـ `new[]`."]}};
+function h(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+function F(t){
+  const f=document.createDocumentFragment();
+  String(t).split(/(`[^`]+`|\*\*[^*]+\*\*)/).forEach(function(p){
+    if(!p)return;
+    if(p[0]==='`'){f.appendChild(h('code','',p.slice(1,-1)));}
+    else if(p.slice(0,2)==='**'){f.appendChild(h('strong','',p.slice(2,-2)));}
+    else f.appendChild(document.createTextNode(p));});
+  return f;
+}
+let curId='',modal=null,lastFocus=null;
+function close(){if(modal){modal.hidden=true;document.body.style.overflow='';if(lastFocus)lastFocus.focus();}}
+function open(id){
+  const E=EXPL[id];if(!E)return;
+  lastFocus=document.activeElement;
+  if(!modal){
+    modal=h('div','xm');modal.hidden=true;modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
+    modal.addEventListener('click',function(e){if(e.target===modal)close();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal&&!modal.hidden)close();});
+    document.body.appendChild(modal);
+  }
+  modal.textContent='';
+  const p=h('div','xp');p.setAttribute('dir','rtl');
+  const hd=h('div','xh'),tt=h('div');
+  const h2=h('h2','',E.title);h2.id='xTitle';tt.appendChild(h2);if(E.sub)tt.appendChild(h('div','sub',E.sub));
+  hd.appendChild(tt);
+  const cb=h('button','btn','إغلاق');cb.type='button';cb.addEventListener('click',close);hd.appendChild(cb);p.appendChild(hd);
+  modal.setAttribute('aria-labelledby','xTitle');
+  const chips=h('div','xchips');E.meta.forEach(function(m){const s=h('span');s.appendChild(F('**'+m[0]+':** '+m[1]));chips.appendChild(s);});p.appendChild(chips);
+  const idea=h('div','xidea');idea.appendChild(F('💡 **فكرة البرنامج:** '+E.idea));p.appendChild(idea);
+  p.appendChild(h('h3','','الكود وشرح كل سطر'));
+  E.code.forEach(function(line,i){
+    const r=h('div','xl');r.appendChild(h('span','no',String(i+1)));
+    r.appendChild(h('div','xc',line||' '));
+    const x=h('div','xe');x.appendChild(F(E.rows[i]));r.appendChild(x);p.appendChild(r);
+  });
+  p.appendChild(h('h3','','▶ مثال تنفيذ'));
+  const u1=h('ul');E.example.forEach(function(t){const li=h('li');li.appendChild(F(t));u1.appendChild(li);});p.appendChild(u1);
+  p.appendChild(h('h3','','⚠ ملاحظات مهمة'));
+  const u2=h('ul');E.notes.forEach(function(t){const li=h('li');li.appendChild(F(t));u2.appendChild(li);});p.appendChild(u2);
+  modal.appendChild(p);modal.hidden=false;document.body.style.overflow='hidden';
+  modal.scrollTop=0;cb.focus();
+}
+function sync(id){
+  if(typeof id==='string')curId=id;
+  const b=document.getElementById('explainBtn');if(!b)return;
+  b.hidden=!EXPL[curId];
+  b.textContent=(typeof I18N!=='undefined'&&I18N.lang()==='en')?'Explain code (Arabic)':'شرح الكود';
+}
+window.__syncExplain=sync;
+document.getElementById('explainBtn').addEventListener('click',function(){open(curId);});
+window.addEventListener('av-lang',function(){sync();});
+window.addEventListener('hashchange',function(){if(modal&&!modal.hidden)close();});
 })();
 </script>
 </body></html>
